@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>美國國內運費查詢</title>
+<style>
+  body { font-family: Arial, "Noto Sans TC", sans-serif; max-width:720px; margin:30px auto; padding:20px; }
+  label { display:block; margin-top:12px; }
+  input[type="text"], input[type="number"] { width:100%; padding:8px; font-size:16px; box-sizing:border-box; }
+  button { margin-top:12px; padding:10px 16px; font-size:16px; border-radius:8px; }
+  .result { margin-top:18px; padding:12px; border-radius:8px; background:#f7f7f7; }
+  .error { color:#b00020; }
+  .muted { color:#666; font-size:13px; }
+</style>
+</head>
+<body>
+<h2>美國國內運費查詢2</h2>
+
+<label>收件 Zip code（5 位）</label>
+<input id="zip" type="text" maxlength="5" placeholder="例如 92870" />
+
+<label>重量（磅，lb）</label>
+<input id="weight" type="number" step="0.1" min="0.1" placeholder="輸入數字（小數會進位）" />
+
+<button id="btn" onclick="queryRate()">查詢運費</button>
+<div class="muted">注意：重量小數會進位到下一整磅；表格僅包含 1–100 磅。</div>
+
+<div id="output" class="result" style="display:none;"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxAdz0PEWQaJ4QpIkuljMbNS_u-2Bj-6YDc7Uh0Qt-d9_Yd8Wmf5_4g5WZ_eNP_CH13gA/exec'; // <- 改成你的Apps Script URL
+
+function showMessage(msg, isError) {
+  const out = document.getElementById('output');
+  out.style.display = 'block';
+  out.innerHTML = msg;
+  out.className = 'result' + (isError ? ' error' : '');
+}
+
+function queryRate() {
+  const zip = document.getElementById('zip').value.trim();
+  const weight = document.getElementById('weight').value.trim();
+
+  if (!zip || zip.replace(/\D/g,'').length !== 5) {
+    showMessage('請輸入 5 位數 Zip code。', true);
+    return;
+  }
+  if (!weight || isNaN(Number(weight)) || Number(weight) <= 0) {
+    showMessage('請輸入正確的重量（數字，大於 0）。', true);
+    return;
+  }
+
+  showMessage('查詢中…', false);
+
+  const url = `${API_URL}?zip=${encodeURIComponent(zip)}&weight=${encodeURIComponent(weight)}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp.success) {
+        showMessage('錯誤：' + resp.message, true);
+      } else {
+        showMessage(`
+          <strong>成功找到費率</strong><br/>
+          Zip code: ${zip}<br/>
+          分區: ${resp.zone}<br/>
+          計費重量: ${resp.weight} lb<br/>
+          費率: <strong>$${resp.rate}</strong>
+        `, false);
+      }
+    })
+    .catch(err => showMessage('發生錯誤：' + err, true));
+}
+</script>
+</body>
+</html>
